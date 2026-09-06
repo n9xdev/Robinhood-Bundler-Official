@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   BRAND,
   DOWNLOADS,
@@ -33,48 +33,19 @@ const FEATURES = [
   },
 ];
 
-async function fileExists(href: string): Promise<boolean> {
-  try {
-    const res = await fetch(href, { method: "HEAD" });
-    if (!res.ok) return false;
-    const type = res.headers.get("content-type") ?? "";
-    // SPA hosts rewrite missing files to index.html — treat that as absent.
-    if (type.includes("text/html")) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function DownloadCard({
-  item,
-  available,
-}: {
-  item: DownloadItem;
-  available: boolean | null;
-}) {
-  const comingSoon = available === false;
+function DownloadCard({ item }: { item: DownloadItem }) {
   return (
     <article className="dl-card">
       <div className="dl-card-top">
         <span className="os-pill">{item.platform}</span>
-        {item.recommended && !comingSoon ? (
-          <span className="rec-pill">Recommended</span>
-        ) : null}
-        {comingSoon ? <span className="soon-pill">Coming soon</span> : null}
+        {item.recommended ? <span className="rec-pill">Recommended</span> : null}
       </div>
       <h3>{item.title}</h3>
       <p>{item.blurb}</p>
       <code className="filename">{item.file}</code>
-      {comingSoon ? (
-        <span className="btn btn-ghost" aria-disabled="true">
-          Coming soon
-        </span>
-      ) : (
-        <a className="btn btn-primary" href={item.href} download={item.file}>
-          Download
-        </a>
-      )}
+      <a className="btn btn-primary" href={item.href} download={item.file}>
+        Download
+      </a>
     </article>
   );
 }
@@ -82,23 +53,6 @@ function DownloadCard({
 export default function App() {
   const platform = useMemo(() => detectPlatform(), []);
   const hero = heroDownload(platform);
-  const [available, setAvailable] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all(
-      DOWNLOADS.map(async (item) => [item.id, await fileExists(item.href)] as const),
-    ).then((entries) => {
-      if (cancelled) return;
-      setAvailable(Object.fromEntries(entries));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const heroReady = available[hero.id] !== false;
-  const heroHref = heroReady ? hero.href : "#download";
 
   return (
     <>
@@ -125,24 +79,14 @@ export default function App() {
             recovery — without juggling scripts or scattered configs.
           </p>
           <div className="hero-actions">
-            {heroReady ? (
-              <a className="btn btn-primary btn-lg" href={heroHref} download={hero.file}>
-                Download for {platformLabel(platform)}
-              </a>
-            ) : (
-              <a className="btn btn-primary btn-lg" href="#download">
-                {platform === "macos" ? "macOS coming soon" : "See downloads"}
-              </a>
-            )}
+            <a className="btn btn-primary btn-lg" href={hero.href} download={hero.file}>
+              Download for {platformLabel(platform)}
+            </a>
             <a className="btn btn-ghost btn-lg" href="#download">
               All platforms
             </a>
           </div>
-          <p className="hero-note">
-            {heroReady
-              ? `Primary build: ${hero.file}`
-              : "macOS disk image is not published yet. Windows and Linux are available below."}
-          </p>
+          <p className="hero-note">Primary build: {hero.file}</p>
         </section>
 
         <section id="download" className="section">
@@ -153,13 +97,7 @@ export default function App() {
           </p>
           <div className="dl-grid">
             {DOWNLOADS.map((item) => (
-              <DownloadCard
-                key={item.id}
-                item={item}
-                available={
-                  item.id in available ? available[item.id] : null
-                }
-              />
+              <DownloadCard key={item.id} item={item} />
             ))}
           </div>
         </section>

@@ -1,22 +1,19 @@
 # Robinhood Bundler — download site
 
-Static Vite + React marketing site. Users download RobinhoodBundler for Windows, Linux, and macOS (Apple Silicon).
+Static Vite + React marketing site. Users download RobinhoodBundler for Windows, Linux, and macOS (Apple Silicon). Production binaries are served from Vercel Blob.
 
 ```bash
 npm install
-npm run sync-downloads   # prefer downloads.zip, else ../robin/release
 npm run dev
 npm run build
 ```
 
-Stable download paths:
+Download URLs:
 
-| File | Platform |
-|---|---|
-| `/downloads/RobinhoodBundler-setup.exe` | Windows installer |
-| `/downloads/RobinhoodBundler.AppImage` | Linux AppImage |
-| `/downloads/RobinhoodBundler.deb` | Debian / Ubuntu |
-| `/downloads/RobinhoodBundler.dmg` | macOS (Apple Silicon) |
-| `/downloads/RobinhoodBundler-mac.zip` | macOS zip fallback |
-
-Binaries in `public/downloads/` and `downloads.zip` are gitignored. Recopy them after each desktop rebuild.
+| File | Platform | Blob |
+|---|---|---|
+| `RobinhoodBundler-setup.exe` | Windows installer | [setup](https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com/RobinhoodBundler_1.0.0_x64-setup.exe) |
+| `RobinhoodBundler.AppImage` | Linux AppImage | [AppImage](https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com/RobinhoodBundler_1.0.0_amd64.AppImage) |
+| `RobinhoodBundler.deb` | Debian / Ubuntu | [deb](https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com/RobinhoodBundler_1.0.0_amd64.deb) |
+| `RobinhoodBundler.dmg` | macOS (Apple Silicon) | [dmg](https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com/RobinhoodBundler_1.0.0_aarch64.dmg) |
+| `RobinhoodBundler-mac.zip` | macOS zip fallback | [zip](https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com/RobinhoodBundler_1.0.0_macos.zip) |

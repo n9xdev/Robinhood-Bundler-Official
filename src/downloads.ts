@@ -14,11 +14,14 @@ export const BRAND = "Robinhood Bundler (Official)";
 export const SUPPORT_URL = "https://t.me/bosonax";
 export const SUPPORT_LABEL = "Bo$onaX";
 
+const BLOB =
+  "https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com";
+
 export const DOWNLOADS: DownloadItem[] = [
   {
     id: "win-setup",
     file: "RobinhoodBundler-setup.exe",
-    href: "/downloads/RobinhoodBundler-setup.exe",
+    href: `${BLOB}/RobinhoodBundler_1.0.0_x64-setup.exe`,
     platform: "windows",
     title: "Windows installer",
     blurb: "NSIS setup for Windows 10/11 (x64).",
@@ -27,7 +30,7 @@ export const DOWNLOADS: DownloadItem[] = [
   {
     id: "linux-appimage",
     file: "RobinhoodBundler.AppImage",
-    href: "/downloads/RobinhoodBundler.AppImage",
+    href: `${BLOB}/RobinhoodBundler_1.0.0_amd64.AppImage`,
     platform: "linux",
     title: "Linux AppImage",
     blurb: "Run on most distros. chmod +x, then launch.",
@@ -36,7 +39,7 @@ export const DOWNLOADS: DownloadItem[] = [
   {
     id: "linux-deb",
     file: "RobinhoodBundler.deb",
-    href: "/downloads/RobinhoodBundler.deb",
+    href: `${BLOB}/RobinhoodBundler_1.0.0_amd64.deb`,
     platform: "linux",
     title: "Debian / Ubuntu",
     blurb: "Native .deb package for amd64.",
@@ -44,7 +47,7 @@ export const DOWNLOADS: DownloadItem[] = [
   {
     id: "mac-dmg",
     file: "RobinhoodBundler.dmg",
-    href: "/downloads/RobinhoodBundler.dmg",
+    href: `${BLOB}/RobinhoodBundler_1.0.0_aarch64.dmg`,
     platform: "macos",
     title: "macOS",
     blurb: "Disk image for Apple Silicon.",
@@ -53,7 +56,7 @@ export const DOWNLOADS: DownloadItem[] = [
   {
     id: "mac-zip",
     file: "RobinhoodBundler-mac.zip",
-    href: "/downloads/RobinhoodBundler-mac.zip",
+    href: `${BLOB}/RobinhoodBundler_1.0.0_macos.zip`,
     platform: "macos",
     title: "macOS zip",
     blurb: "App bundle fallback for Apple Silicon. Prefer the .dmg.",
