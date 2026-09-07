@@ -3,7 +3,7 @@
 Professional desktop toolkit for launching and managing tokens on [Pons](https://ponsfamily.com/) · Robinhood Chain.
 
 <!-- Replace VIDEO_ID when the intro is live. -->
-[![Robinhood Bundler intro](docs/youtube-cover.png)](https://www.youtube.com/watch?v=VIDEO_ID)
+[![Robinhood Bundler intro](docs/youtube-cover.png)](https://youtu.be/vayW_41kZdo)
 
 This repo is the static Vite + React download site. Binaries are served from Vercel Blob.
 
