@@ -1,30 +1,91 @@
-# Robinhood Bundler
+# Robinhood Trading Bot
 
-Professional desktop toolkit for launching and managing tokens on [Pons](https://ponsfamily.com/) · Robinhood Chain.
+Native **Rust** operator suite for [Robinhood Chain](https://explorer.chain.robinhood.com) (chain ID **4663**) and [Pons](https://ponsfamily.com/). One control surface for launch, execution, and recovery — without juggling scripts, terminals, or scattered configs.
+
+Private keys stay on your machine. **Dry run** is the default — switch to **Live** only when you are ready to spend ETH.
+
+Independent software. Not affiliated with Pons, Robinhood, or their affiliates.
+
+This repo is the static Vite + React download site. Binaries are served from Vercel Blob.
 
 <!-- Replace VIDEO_ID when the intro is live. -->
 ![Robinhood Bundler intro](docs/youtube-cover.png)
 
 Watch how Robinhood Bundler works: https://youtu.be/vayW_41kZdo
 
-This repo is the static Vite + React download site. Binaries are served from Vercel Blob.
+---
+
+## Modules
+
+| Module | Role |
+|---|---|
+| [Bundler](#robinhood-bundler) | Launch a token, pre-sign buys, fire when trading opens, then Gather |
+| [Sniper](#robinhood-sniper-bot) | Watch new pools and trading-open; submit prepared buys with cap and slippage guards |
+| [Copytrading](#robinhood-copytrading-bot) | Follow a wallet or set of wallets on-chain with size, delay, and max-notional controls |
+| [Arbitrage](#robinhood-arbitrage-bot) | Quote across Uniswap V3 and Pancake V3; trade only when spread covers gas and slippage |
+| [Market Maker](#robinhood-market-maker-bot) | Inventory-aware two-sided quotes with named strategies |
+| [Volume booster](#robinhood-volume-booster) | Optional activity bots you trigger yourself — Launch funds wallets, it does not auto-buy |
 
 ---
 
-## How the bundler works
+## Architecture
 
-Robinhood Bundler is a native desktop app (Windows, Linux, macOS). End users do not install Node. Private keys stay on the device. **Dry run** is the default — switch to **Live** only when you are ready to spend ETH.
+Shared Rust runtime: RPC, wallets, dry-run, and logs. Modules plug in; they do not hold keys of their own.
+
+```mermaid
+flowchart TB
+  runtime[RustRuntime]
+  rpc[RPC]
+  wallets[Wallets]
+  dryrun[DryRun]
+  logs[Logs]
+
+  runtime --> rpc
+  runtime --> wallets
+  runtime --> dryrun
+  runtime --> logs
+
+  copytrading[Copytrading]
+  sniper[Sniper]
+  arbitrage[Arbitrage]
+  marketMaker[MarketMaker]
+  volume[Volume]
+  bundler[Bundler]
+
+  copytrading --> runtime
+  sniper --> runtime
+  arbitrage --> runtime
+  marketMaker --> runtime
+  volume --> runtime
+  bundler --> runtime
+```
+
+---
+
+## Why Rust
+
+- **Latency** — tokio async I/O and a tight hot path for quotes, watches, and signed submits
+- **Single binary** — no Node runtime for operators; alloy talks to the chain
+- **Keys never leave the box** — generate, fund, and sign locally; nothing is uploaded unless you choose to share it
+
+Packaged Bundler builds (Windows `.exe`, Linux AppImage / `.deb`, macOS `.dmg`) are listed under [Downloads](#downloads). End users do not install Node.
+
+---
+
+## Robinhood Bundler
+
+Launch and manage tokens on Pons · Robinhood Chain. Native desktop app (Windows, Linux, macOS). Generate disjoint wallets, fund and wrap, pre-sign SwapRouter buys, launch, fire when trading opens, then Gather.
 
 Tabs: **Launch** · **Wallets** · **Volume** · **Gather**.
 
 ```mermaid
 flowchart LR
-  wallets[Wallets] --> fund[Fund bundlers]
-  fund --> presign[Pre-sign buys]
-  presign --> launch[Launch token]
-  launch --> fire[Fire bundled buys]
-  fire --> volume[Fund volume]
-  volume --> gather[Gather home]
+  wallets[Wallets] --> fund[FundBundlers]
+  fund --> presign[PreSignBuys]
+  presign --> launch[LaunchToken]
+  launch --> fire[FireBundledBuys]
+  fire --> volume[FundVolume]
+  volume --> gather[GatherHome]
 ```
 
 **Launch Bundle** (`bundle`) runs in this order:
@@ -38,9 +99,72 @@ flowchart LR
 
 **Gather** claims creator fees, sells tokens, unwraps WETH, and sweeps ETH back to the deployer.
 
+**Operator controls:** token metadata and logo, bundler count and per-wallet buy size, launch mode (Pons / custom), LP burn bps, dry-run / live, Gather (all / bundler / volume / claim).
+
+---
+
+## Robinhood Sniper Bot
+
+Watch new pools and trading-open, then submit **prepared** buys with cap and slippage guards. Same idea as the bundler’s pre-sign-then-fire path: the order is signed ahead of time; the submit waits until the pool is tradable.
+
+**When you use it:** you already know the token or factory you care about, and you want the buy ready before trading opens — not a scramble after the first block.
+
+**Operator controls:** watch list (token / pair / factory), max cap, slippage, gas ceiling, dry-run first. Cap safety re-quotes and re-signs after the pool exists, the same way bundled buys do.
+
+---
+
+## Robinhood Copytrading Bot
+
+Follow a wallet or a set of wallets on-chain. When they buy or sell, the bot sizes a matching order on your side — within the limits you set.
+
+**When you use it:** you want to mirror a known deployer, trader, or bundle wallet without sitting on the explorer.
+
+**Operator controls:** source address(es), size (fixed ETH or ratio of the source fill), delay, max notional per trade and per session, exclude list (your own deployer, bundlers, volume wallets), dry-run first.
+
+---
+
+## Robinhood Arbitrage Bot
+
+Quote the same pair across **Uniswap V3** and **Pancake V3**. Trade only when the spread covers gas and slippage. Quotes try each DEX stack until one returns liquidity; a trade that does not clear the cost floor is skipped.
+
+**When you use it:** a token trades on more than one V3 stack (the same layout used on Robinhood Chain mainnet and testnet), and you want a mechanical check before you spend gas.
+
+**Operator controls:** pair list, min spread after gas, slippage, max size, poll interval, dry-run first.
+
+---
+
+## Robinhood Market Maker Bot
+
+Inventory-aware two-sided quotes. Strategies share names with the volume engine so a wallet can run the same playbook from either module:
+
+| Strategy | Intent |
+|---|---|
+| `pulse` | Steady two-sided prints inside a delay band |
+| `bias_up` | Lean buy; smaller sells |
+| `bias_down` | Lean sell; larger sells |
+| `range_chop` | Fade moves around an EMA |
+| `burst` | Short bursts, then idle |
+| `inventory` | Rebalance toward a target token / WETH mix |
+
+**When you use it:** you hold inventory in a pool and want quotes that respect balances, gas reserve, and min/max trade size — not a one-shot dump.
+
+**Operator controls:** strategy per wallet, min/max trade size, delay band, buy-bias bps, sell-bps min/max, gas reserve, dry-run first.
+
+---
+
+## Robinhood Volume Booster
+
+Optional activity bots **you trigger yourself**. Launch Bundle funds and preps volume wallets; it does **not** auto-buy. Trigger is a separate action.
+
+**When you use it:** after launch, when you want per-wallet activity on a token you already created. Wallets must exist (Bundle / Fund / Generate) before Trigger.
+
+**Operator controls:** wallet count, per-wallet amount, strategy (`pulse`, `bias_up`, `bias_down`, `range_chop`, `burst`, `inventory`), period, repeats, which wallets are included in Trigger all. Trigger does not create wallets.
+
 ---
 
 ## Downloads
+
+Packaged Bundler app — Windows, Linux, macOS. Keys stay on the device.
 
 ```bash
 npm install
@@ -55,6 +179,8 @@ npm run build
 | `RobinhoodBundler.deb` | Debian / Ubuntu | [deb](https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com/RobinhoodBundler_1.0.0_amd64.deb) |
 | `RobinhoodBundler.dmg` | macOS (Apple Silicon) | [dmg](https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com/RobinhoodBundler_1.0.0_aarch64.dmg) |
 | `RobinhoodBundler-mac.zip` | macOS zip fallback | [zip](https://8kncbrfxzyjag1dk.public.blob.vercel-storage.com/RobinhoodBundler_1.0.0_macos.zip) |
+
+**Requirements:** Windows 10/11, macOS, or Linux (x64) · ETH on Robinhood Chain for live launches.
 
 ---
 
@@ -92,4 +218,24 @@ The first UI E2E gather on E2E LXB7 failed: bundler `0x06e30b92…` had insuffic
 
 ---
 
-Robinhood Bundler is independent software for public Pons contracts on Robinhood Chain. Not affiliated with Pons, Robinhood, or their affiliates. Provided as-is, without warranty. Token launches are high risk — never spend more than you can afford to lose. Always start in Dry run.
+## Safety
+
+- **Dry run** is the default. Rehearse every path before Live.
+- **Disjoint wallet sets** — deployer, bundlers, and volume wallets must not overlap.
+- **Private keys stay on your device.** Generate and sign locally.
+- You are responsible for funds, keys, and compliance in your jurisdiction.
+- Token launches and automated trading are high risk — never spend more than you can afford to lose.
+
+---
+
+## Support
+
+Questions or partnership inquiries — [Bo$onaX](https://t.me/bosonax) on Telegram.
+
+---
+
+## License & notice
+
+© Robinhood Trading Bot. All rights reserved.
+
+Robinhood Trading Bot is independent software for public contracts on Robinhood Chain. Not affiliated with Pons, Robinhood, or their affiliates. Provided as-is, without warranty. Token launches are high risk — never spend more than you can afford to lose. Always start in Dry run.
